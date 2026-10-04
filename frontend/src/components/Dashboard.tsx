@@ -24,6 +24,9 @@ export function Dashboard() {
           <ChatPanel />
         </div>
       </div>
+      <footer className="app-footer">
+        © {new Date().getFullYear()} Mukesh Kumar Pullabhatla. All rights reserved.
+      </footer>
     </div>
   )
 }
