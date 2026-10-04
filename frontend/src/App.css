@@ -213,8 +213,46 @@ button:disabled {
   color: var(--text-h);
 }
 
-.chat-content {
+.chat-content p {
+  margin: 0 0 8px;
   white-space: pre-wrap;
+}
+
+.chat-content p:last-child {
+  margin-bottom: 0;
+}
+
+.chat-content ul,
+.chat-content ol {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+
+.chat-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin: 4px 0 12px;
+}
+
+.chat-content th,
+.chat-content td {
+  border: 1px solid var(--border);
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.chat-content th {
+  font-weight: 600;
+  color: var(--text-h);
+  background: var(--code-bg);
+}
+
+.chat-content code {
+  background: var(--code-bg);
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 0.9em;
 }
 
 .status-line {

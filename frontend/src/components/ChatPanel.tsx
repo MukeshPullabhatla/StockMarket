@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { streamChat } from '../api/client'
 import type { ChatMessage } from '../types'
 
@@ -76,7 +78,13 @@ export function ChatPanel() {
         {messages.map((m, i) => (
           <div key={i} className={`chat-message ${m.role}`}>
             <span className="chat-role">{m.role === 'user' ? 'You' : 'Assistant'}</span>
-            <span className="chat-content">{m.content || (busy && i === messages.length - 1 ? '…' : '')}</span>
+            <div className="chat-content">
+              {m.content ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+              ) : (
+                busy && i === messages.length - 1 ? '…' : ''
+              )}
+            </div>
           </div>
         ))}
         {statusLine && <p className="muted status-line">{statusLine}</p>}
