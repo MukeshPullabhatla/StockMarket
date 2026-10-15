@@ -116,7 +116,8 @@ backend configuration. `docker-compose.yml` maps the frontend to host port
 This walks through hosting the app on a VM that's free forever (not a trial),
 reachable from any browser over plain HTTP, using the `docker-compose.yml` in
 this repo almost unchanged. It assumes you don't own a domain — you'll access
-the app via the VM's public IP address.
+the app via the VM's public IP address. Step 11 then optionally adds a free
+domain name (DuckDNS) and HTTPS.
 
 Total cost: $0/month, using Oracle Cloud Infrastructure's (OCI) Always Free
 tier (an Ampere A1 ARM VM with 1-4 OCPUs / 6-24GB RAM, free forever).
@@ -294,16 +295,90 @@ ssh -i /path/to/ssh-key-<date>.key ubuntu@<PUBLIC_IP> \
 
 ### Known limitations of this setup
 
-- **HTTP only, no padlock.** The app is served over plain HTTP on the raw IP
-  address, since there's no domain name to issue a TLS certificate for. For
-  personal use this is usually fine, but some browser APIs are restricted on
-  non-HTTPS origins. Free fix if you want it later: run
-  [Caddy](https://caddyfile.org/) in front of the frontend container and
-  point it at `<ip-with-dashes>.sslip.io` (e.g. `129-213-104-35.sslip.io`) —
-  a free wildcard DNS service that resolves to the IP embedded in the
-  hostname — and Caddy will automatically issue and renew a real Let's
-  Encrypt certificate for it, with no domain purchase required.
+- **HTTP only, no padlock** — unless you follow step 11 below to add a free
+  domain name and HTTPS.
 - **Single VM, no horizontal scaling.** Fine for personal/low-traffic use;
   not meant for production-scale traffic.
 - **SQLite on local disk.** The watchlist database lives in a Docker volume
   on this one VM — there's no automatic off-box backup.
+
+### 11. Optional: free domain name + HTTPS (DuckDNS + Caddy)
+
+This gives the app a real address like `https://mukeshkp.duckdns.org` with a
+padlock, still for $0. [DuckDNS](https://www.duckdns.org) provides the free
+hostname; [Caddy](https://caddyserver.com) (added by
+`docker-compose.https.yml`) gets and renews a Let's Encrypt certificate for it
+automatically and redirects `http://` to `https://`.
+
+**a. Keep the VM's IP from changing (recommended).** The auto-assigned public
+IP is *ephemeral* — it can change if the instance is stopped. OCI can't
+convert an ephemeral IP to a reserved one, so you swap it for a new reserved
+IP (free; the app will be unreachable for about a minute):
+
+1. Open the instance → **Networking** tab → under **Attached VNICs**, click
+   the VNIC name (e.g. `stock-dashboard` *Primary VNIC*).
+2. On the VNIC page, open the **IP administration** tab (older consoles:
+   **IPv4 Addresses** under *Resources*).
+3. On the row for the private IP (e.g. `10.0.0.x`), click **⋮ → Edit**.
+4. Under **Public IP type**, choose **No public IP** → **Update**. This
+   releases the old ephemeral IP.
+5. **⋮ → Edit** on the same row again → **Reserved public IP** → **Create
+   new reserved IP**, give it a name (e.g. `stock-dashboard-ip`) → **Update**.
+
+Note the new public IP — it's now permanent, even across stop/start. It will
+be different from the old one, so use it in your SSH commands and in step b.
+
+**b. Create the DuckDNS subdomain.**
+1. Go to [duckdns.org](https://www.duckdns.org) and sign in (GitHub/Google).
+2. Type a name (e.g. `mukeshkp`) in **sub domain** → **add domain**.
+3. In the **current ip** box next to it, enter the VM's public IP →
+   **update ip**.
+4. Copy your **token** from the top of the page — keep it secret.
+
+Check it from your local machine (may take a minute):
+
+```bash
+nslookup mukeshkp.duckdns.org   # should print the VM's public IP
+```
+
+**c. Keep DuckDNS pointed at the VM.** DuckDNS can drop subdomains that
+never get updated, and this also fixes things automatically if the IP ever
+changes. On the VM, add a cron job that refreshes it every 5 minutes:
+
+```bash
+(crontab -l 2>/dev/null; echo '*/5 * * * * curl -s "https://www.duckdns.org/update?domains=mukeshkp&token=YOUR_TOKEN&ip=" -o ~/duckdns.log') | crontab -
+```
+
+(Replace `mukeshkp` and `YOUR_TOKEN`. `cat ~/duckdns.log` should say `OK`
+after 5 minutes.)
+
+**d. Make sure port 443 is open** — both the OCI security list (step 4) and
+iptables (step 7) must allow TCP 443 as well as 80. Caddy needs port 80 too,
+to prove domain ownership to Let's Encrypt.
+
+**e. Start the app with HTTPS.** On the VM, add your hostname to `.env`:
+
+```bash
+cd ~/StockMarket
+echo "DOMAIN=mukeshkp.duckdns.org" >> .env
+sudo docker compose down
+sudo docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build
+sudo docker compose -f docker-compose.yml -f docker-compose.https.yml logs -f caddy   # watch for "certificate obtained successfully", then Ctrl+C
+```
+
+Open `https://mukeshkp.duckdns.org`. From now on, use both `-f` files when
+updating (step 10):
+
+```bash
+ssh -i /path/to/ssh-key-<date>.key ubuntu@<PUBLIC_IP> \
+  "cd ~/StockMarket && git pull && sudo docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build"
+```
+
+If the certificate fails, it's almost always one of: the DuckDNS name doesn't
+resolve to the VM's IP yet (re-check **b**), or port 80/443 is blocked
+(re-check **d**). Caddy retries automatically once fixed.
+
+Switching to a paid domain later (e.g. `mukeshkp.dev`) is the same process:
+add an **A record** for it pointing at the VM's IP at your registrar, change
+`DOMAIN` in `.env`, and re-run the `up` command — Caddy issues a certificate
+for the new name automatically.

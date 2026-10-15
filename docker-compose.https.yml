@@ -1,0 +1,26 @@
+# Adds automatic HTTPS for a real hostname (e.g. a DuckDNS subdomain).
+# Usage: set DOMAIN in .env, then
+#   docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build
+services:
+  frontend:
+    # Caddy takes over host ports 80/443; the frontend is reached internally.
+    ports: !reset []
+
+  caddy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN:?Set DOMAIN in .env, e.g. DOMAIN=mukeshkp.duckdns.org}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - frontend
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:
