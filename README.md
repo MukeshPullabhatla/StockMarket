@@ -32,6 +32,13 @@ backend/   FastAPI (Python), yfinance for market data, SQLite-backed watchlist
   history, and screener-based movers.
 - `backend/app/api/chat.py` + `services/chat_service.py` — the AI chat
   endpoint (see below).
+- `backend/app/api/profile_chat.py` + `services/profile_chat_service.py` —
+  the "Ask about Mukesh" assistant (floating ✨ button on every page except
+  the dashboard). It answers strictly from
+  [backend/app/data/profile.md](backend/app/data/profile.md) — edit that file
+  to change what it knows; anything not in it, the assistant says it doesn't
+  know. It streams answers token by token and shares the chat rate limits
+  (`services/chat_guard.py`) with the market assistant.
 - `backend/app/api/visits.py` + `services/visitor_store.py` — site visitor
   counter. Each visitor counts once per day (salted hash of IP + user agent,
   kept only for the current day; raw IPs are never stored; bots are skipped).

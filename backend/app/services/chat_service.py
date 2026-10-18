@@ -112,13 +112,36 @@ async def stream_chat(messages: list[ChatMessage]) -> AsyncGenerator[dict, None]
     api_messages = _to_api_messages(messages)
 
     for _ in range(MAX_TOOL_ROUNDS):
+        content = ""
+        # Streamed tool calls arrive in fragments keyed by index; reassemble them.
+        tool_calls: dict[int, dict] = {}
+        finish_reason = None
         try:
-            completion = await client.chat.completions.create(
+            stream = await client.chat.completions.create(
                 model=GROQ_MODEL,
                 max_tokens=2048,
                 messages=api_messages,
                 tools=TOOLS,
+                stream=True,
             )
+            async for chunk in stream:
+                if not chunk.choices:
+                    continue
+                choice = chunk.choices[0]
+                delta = choice.delta
+                if delta.content:
+                    content += delta.content
+                    yield {"type": "text", "text": delta.content}
+                for tc in delta.tool_calls or []:
+                    call = tool_calls.setdefault(tc.index, {"id": "", "name": "", "arguments": ""})
+                    if tc.id:
+                        call["id"] = tc.id
+                    if tc.function and tc.function.name:
+                        call["name"] = tc.function.name
+                    if tc.function and tc.function.arguments:
+                        call["arguments"] += tc.function.arguments
+                if choice.finish_reason:
+                    finish_reason = choice.finish_reason
         except APIStatusError as exc:
             yield {"type": "error", "error": f"Groq API error: {exc.message}"}
             return
@@ -127,27 +150,32 @@ async def stream_chat(messages: list[ChatMessage]) -> AsyncGenerator[dict, None]
             yield {"type": "error", "error": str(exc)}
             return
 
-        message = completion.choices[0].message
-        if message.content:
-            yield {"type": "text", "text": message.content}
-
-        if completion.choices[0].finish_reason != "tool_calls" or not message.tool_calls:
+        if finish_reason != "tool_calls" or not tool_calls:
             break
 
+        calls = [tool_calls[i] for i in sorted(tool_calls)]
         api_messages.append(
             {
                 "role": "assistant",
-                "content": message.content,
-                "tool_calls": [tc.model_dump() for tc in message.tool_calls],
+                "content": content or None,
+                "tool_calls": [
+                    {
+                        "id": call["id"],
+                        "type": "function",
+                        "function": {"name": call["name"], "arguments": call["arguments"]},
+                    }
+                    for call in calls
+                ],
             }
         )
-        for tc in message.tool_calls:
-            tool_input = json.loads(tc.function.arguments)
-            yield {"type": "tool", "name": tc.function.name, "input": tool_input}
-            result = await _execute_tool(tc.function.name, tool_input)
-            api_messages.append(
-                {"role": "tool", "tool_call_id": tc.id, "content": result}
-            )
+        for call in calls:
+            try:
+                tool_input = json.loads(call["arguments"] or "{}")
+            except json.JSONDecodeError:
+                tool_input = {}
+            yield {"type": "tool", "name": call["name"], "input": tool_input}
+            result = await _execute_tool(call["name"], tool_input)
+            api_messages.append({"role": "tool", "tool_call_id": call["id"], "content": result})
     else:
         yield {"type": "error", "error": "Stopped after too many tool call rounds."}
         return

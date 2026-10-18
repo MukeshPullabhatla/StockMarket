@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import chat, stocks, visits, watchlist, ws
+from app.api import chat, profile_chat, stocks, visits, watchlist, ws
 from app.config import CORS_ORIGINS
 from app.services import broadcaster
 
@@ -31,6 +31,7 @@ app.add_middleware(
 app.include_router(stocks.router, prefix="/api", tags=["stocks"])
 app.include_router(watchlist.router, prefix="/api/watchlist", tags=["watchlist"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
+app.include_router(profile_chat.router, prefix="/api/profile-chat", tags=["chat"])
 app.include_router(visits.router, prefix="/api/visits", tags=["visits"])
 app.include_router(ws.router, prefix="/ws", tags=["websocket"])
 

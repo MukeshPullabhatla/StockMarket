@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { OWNER_NAME, SITE_NAME } from '../siteConfig'
+import { AskMeWidget } from './AskMeWidget'
 import { NeuralBackground } from './NeuralBackground'
 import { VisitorCounter } from './VisitorCounter'
 
@@ -75,6 +76,8 @@ export function Layout() {
       <main className="site-main">
         <Outlet />
       </main>
+      {/* The dashboard has its own market chat, so skip the profile assistant there */}
+      {!pathname.startsWith('/stocks/') && <AskMeWidget />}
       <footer className="app-footer">
         <div className="container">
           <VisitorCounter />

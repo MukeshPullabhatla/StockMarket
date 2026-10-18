@@ -36,8 +36,11 @@ export type ChatStreamEvent =
   | { type: 'error'; error: string }
   | { type: 'done' }
 
-export async function* streamChat(messages: ChatMessage[]): AsyncGenerator<ChatStreamEvent> {
-  const res = await fetch('/api/chat', {
+export async function* streamChat(
+  messages: ChatMessage[],
+  endpoint = '/api/chat',
+): AsyncGenerator<ChatStreamEvent> {
+  const res = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ messages }),
