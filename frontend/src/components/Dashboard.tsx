@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { usePageTitle } from '../hooks/usePageTitle'
 import { usePriceStream } from '../hooks/usePriceStream'
 import { ChatPanel } from './ChatPanel'
 import { MarketMovers } from './MarketMovers'
@@ -6,6 +7,7 @@ import { StockChart } from './StockChart'
 import { Watchlist } from './Watchlist'
 
 export function Dashboard() {
+  usePageTitle('Stock Trend Dashboard')
   const liveQuotes = usePriceStream()
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null)
 
@@ -24,9 +26,6 @@ export function Dashboard() {
           <ChatPanel />
         </div>
       </div>
-      <footer className="app-footer">
-        © {new Date().getFullYear()} Mukesh Kumar Pullabhatla. All rights reserved.
-      </footer>
     </div>
   )
 }

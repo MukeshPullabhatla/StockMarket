@@ -33,7 +33,11 @@ backend/   FastAPI (Python), yfinance for market data, SQLite-backed watchlist
 - `backend/app/api/chat.py` + `services/chat_service.py` — the AI chat
   endpoint (see below).
 - `frontend/src/components/` — `Dashboard`, `Watchlist`, `MarketMovers`,
-  `StockChart`, and `ChatPanel`.
+  `StockChart`, and `ChatPanel`, plus `Layout` (nav bar and footer).
+- `frontend/src/pages/` — site pages, routed with `react-router`: Home (`/`),
+  Stocks (`/stocks`), Contact (`/contact`); the dashboard lives at
+  `/stocks/dashboard`. Name, email and links are set in
+  `frontend/src/siteConfig.ts`.
 
 ## How the LLM/AI integration works
 
