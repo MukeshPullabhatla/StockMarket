@@ -12,9 +12,14 @@ export function Dashboard() {
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null)
 
   return (
-    <div className="dashboard">
+    <div className="dashboard container">
       <header className="app-header">
-        <h1>Stock Trend Dashboard</h1>
+        <p className="eyebrow">
+          <span className="live-dot" aria-hidden="true" /> Live market data
+        </p>
+        <h1>
+          Stock Trend <span className="gradient-text">Dashboard</span>
+        </h1>
       </header>
       <div className="dashboard-grid">
         <div className="dashboard-column">
