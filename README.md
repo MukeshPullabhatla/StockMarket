@@ -32,6 +32,11 @@ backend/   FastAPI (Python), yfinance for market data, SQLite-backed watchlist
   history, and screener-based movers.
 - `backend/app/api/chat.py` + `services/chat_service.py` — the AI chat
   endpoint (see below).
+- `backend/app/api/visits.py` + `services/visitor_store.py` — site visitor
+  counter. Each visitor counts once per day (salted hash of IP + user agent,
+  kept only for the current day; raw IPs are never stored; bots are skipped).
+  The footer shows the total once it reaches `VISITOR_COUNT_MIN` in
+  `frontend/src/siteConfig.ts`.
 - `frontend/src/components/` — `Dashboard`, `Watchlist`, `MarketMovers`,
   `StockChart`, and `ChatPanel`, plus `Layout` (nav bar and footer).
 - `frontend/src/pages/` — site pages, routed with `react-router`: Home (`/`),

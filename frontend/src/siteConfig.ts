@@ -8,3 +8,6 @@ export const CONTACT = {
   linkedin: 'https://www.linkedin.com/in/mukesh-kumar-pullabhatla-47a502200',
   github: 'https://github.com/mukeshpullabhatla',
 }
+
+// The footer visitor counter stays hidden until the total reaches this number.
+export const VISITOR_COUNT_MIN = 1

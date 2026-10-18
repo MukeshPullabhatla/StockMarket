@@ -72,3 +72,7 @@ export async function* streamChat(messages: ChatMessage[]): AsyncGenerator<ChatS
     }
   }
 }
+
+export function recordVisit(): Promise<{ total: number }> {
+  return request('/api/visits', { method: 'POST' })
+}

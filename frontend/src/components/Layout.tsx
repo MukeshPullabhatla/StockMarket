@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { OWNER_NAME, SITE_NAME } from '../siteConfig'
 import { NeuralBackground } from './NeuralBackground'
+import { VisitorCounter } from './VisitorCounter'
 
 // Clicking a dropdown item keeps focus inside the menu, which would hold it
 // open via :focus-within; blur so it closes after navigating.
@@ -76,7 +77,10 @@ export function Layout() {
       </main>
       <footer className="app-footer">
         <div className="container">
-          © {new Date().getFullYear()} {OWNER_NAME}. All rights reserved.
+          <VisitorCounter />
+          <p>
+            © {new Date().getFullYear()} {OWNER_NAME}. All rights reserved.
+          </p>
         </div>
       </footer>
     </>
