@@ -59,10 +59,15 @@ export function ChatPanel() {
       }
     } catch (err) {
       setStatusLine(null)
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: `Error: ${err instanceof Error ? err.message : String(err)}` },
-      ])
+      const text = err instanceof Error ? err.message : String(err)
+      // Show the problem (e.g. a rate-limit notice) in the empty reply bubble.
+      setMessages((prev) => {
+        const last = prev[prev.length - 1]
+        if (last?.role === 'assistant' && !last.content) {
+          return [...prev.slice(0, -1), { role: 'assistant', content: `⚠️ ${text}` }]
+        }
+        return [...prev, { role: 'assistant', content: `⚠️ ${text}` }]
+      })
     } finally {
       setBusy(false)
     }
@@ -94,6 +99,7 @@ export function ChatPanel() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask about a stock or the market…"
+          maxLength={1000}
           disabled={busy}
         />
         <button type="submit" disabled={busy || !input.trim()}>

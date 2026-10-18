@@ -26,16 +26,8 @@ export function getWatchlist(): Promise<WatchlistItem[]> {
   return request('/api/watchlist')
 }
 
-export function addToWatchlist(symbol: string): Promise<WatchlistItem> {
-  return request('/api/watchlist', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ symbol }),
-  })
-}
-
-export function removeFromWatchlist(symbol: string): Promise<void> {
-  return request(`/api/watchlist/${symbol}`, { method: 'DELETE' })
+export function lookupSymbol(symbol: string): Promise<{ symbol: string; name: string | null }> {
+  return request(`/api/symbol/${encodeURIComponent(symbol)}`)
 }
 
 export type ChatStreamEvent =
@@ -50,6 +42,10 @@ export async function* streamChat(messages: ChatMessage[]): AsyncGenerator<ChatS
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ messages }),
   })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail || `Request failed: ${res.status}`)
+  }
   if (!res.body) throw new Error('No response body from chat endpoint')
 
   const reader = res.body.getReader()

@@ -105,6 +105,29 @@ Copy `.env.example` to `.env` and set:
 | `GROQ_API_KEY` | API key for Groq (required for the chat assistant to work). |
 | `GROQ_MODEL` | Groq model id to use (default: `openai/gpt-oss-120b`). |
 | `POLL_INTERVAL_SECONDS` | How often the backend polls live prices for the WebSocket feed. |
+| `CHAT_LIMIT_PER_HOUR` / `CHAT_LIMIT_PER_DAY` | AI chat messages allowed per visitor (default 15 / 50). |
+| `CHAT_LIMIT_SITE_PER_DAY` | AI chat messages allowed for the whole site per day, protecting the Groq quota (default 500). |
+| `ADMIN_KEY` | Secret needed to change the shared default watchlist (sent as an `X-Admin-Key` header). Leave empty to disable edits. |
+
+### Abuse protection
+
+- **AI chat** is rate-limited per visitor IP and site-wide (limits above; a
+  blocked visitor sees a friendly "try again in N minutes" message). Messages
+  are capped at 1,000 characters and only the last 20 messages of history are
+  sent to the model.
+- **Watchlists are personal**: each visitor's list is stored in their own
+  browser (`localStorage`), seeded from the shared default list on first
+  visit. Only the site owner can change that default list:
+
+  ```bash
+  curl -X POST https://<your-site>/api/watchlist -H "X-Admin-Key: <ADMIN_KEY>" \
+    -H "Content-Type: application/json" -d '{"symbol": "MSFT"}'
+  curl -X DELETE https://<your-site>/api/watchlist/MSFT -H "X-Admin-Key: <ADMIN_KEY>"
+  ```
+- **Market data is cached** server-side and shared across visitors (quotes
+  15s, movers 60s, chart history 5 min, company names 1 day), so traffic
+  spikes don't get the server throttled by Yahoo Finance. Quote requests are
+  capped at 25 symbols.
 
 Without `GROQ_API_KEY`, the rest of the dashboard (quotes, charts, watchlist,
 movers) still works — only the chat assistant is disabled.

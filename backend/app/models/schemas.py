@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Quote(BaseModel):
@@ -36,12 +36,17 @@ MoverCategory = Literal["gainers", "losers", "most_active"]
 
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant"]
-    content: str
+    content: str = Field(max_length=20_000)
 
 
 class ChatRequest(BaseModel):
-    messages: list[ChatMessage]
+    messages: list[ChatMessage] = Field(max_length=200)
 
 
 class VisitorCount(BaseModel):
     total: int
+
+
+class SymbolInfo(BaseModel):
+    symbol: str
+    name: str | None = None
