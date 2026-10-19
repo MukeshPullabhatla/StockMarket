@@ -11,3 +11,9 @@ export const CONTACT = {
 
 // The footer visitor counter stays hidden until the total reaches this number.
 export const VISITOR_COUNT_MIN = 1
+
+// Optimized copies of public/profile.png (regenerate them if the photo changes).
+export const PROFILE_PHOTO = {
+  large: '/profile-480.webp',
+  small: '/profile-128.webp',
+}

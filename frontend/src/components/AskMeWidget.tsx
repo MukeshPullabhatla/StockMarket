@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { streamChat } from '../api/client'
+import { PROFILE_PHOTO } from '../siteConfig'
 import type { ChatMessage } from '../types'
 
 const SUGGESTIONS = [
@@ -78,8 +79,11 @@ export function AskMeWidget() {
       {open && (
         <section className="askme-panel" role="dialog" aria-label="Ask about Mukesh">
           <header className="askme-header">
-            <div className="askme-avatar" aria-hidden="true">
-              ✨
+            <div className="askme-avatar">
+              <img src={PROFILE_PHOTO.small} alt="" width={128} height={128} />
+              <span className="askme-avatar-spark" aria-hidden="true">
+                ✨
+              </span>
             </div>
             <div className="askme-heading">
               <h2>Ask about Mukesh</h2>
@@ -150,7 +154,14 @@ export function AskMeWidget() {
         aria-expanded={open}
         aria-label={open ? 'Close chat' : 'Ask about me'}
       >
-        {open ? '×' : '✨ Ask about me'}
+        {open ? (
+          '×'
+        ) : (
+          <>
+            <img className="askme-launcher-photo" src={PROFILE_PHOTO.small} alt="" width={128} height={128} />
+            ✨ Ask about me
+          </>
+        )}
       </button>
     </>
   )

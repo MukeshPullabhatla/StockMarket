@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 import { TypingText } from '../components/TypingText'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { CONTACT, OWNER_NAME } from '../siteConfig'
+import { CONTACT, OWNER_NAME, PROFILE_PHOTO } from '../siteConfig'
 
 const TAGLINES = [
   'AI Engineer',
@@ -87,15 +87,24 @@ export function HomePage() {
           </div>
         </div>
 
-        <div className="ai-core" aria-hidden="true">
-          <div className="ai-core-ring ring-1" />
-          <div className="ai-core-ring ring-2" />
-          <div className="ai-core-ring ring-3" />
+        <div className="ai-core">
+          <div className="ai-core-ring ring-1" aria-hidden="true" />
+          <div className="ai-core-ring ring-2" aria-hidden="true" />
+          <div className="ai-core-ring ring-3" aria-hidden="true" />
           <div className="ai-core-center">
-            <span>AI</span>
+            <img
+              src={PROFILE_PHOTO.large}
+              alt={`Photo of ${OWNER_NAME}`}
+              width={480}
+              height={480}
+              fetchPriority="high"
+            />
+            <span className="ai-core-badge" aria-hidden="true">
+              AI
+            </span>
           </div>
           {AI_PLATFORMS.map((name, i) => (
-            <span key={name} className={`ai-core-orbit orbit-${i + 1}`}>
+            <span key={name} className={`ai-core-orbit orbit-${i + 1}`} aria-hidden="true">
               {name}
             </span>
           ))}
