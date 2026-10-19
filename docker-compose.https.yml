@@ -12,7 +12,8 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      - DOMAIN=${DOMAIN:?Set DOMAIN in .env, e.g. DOMAIN=mukeshkp.duckdns.org}
+      - DOMAIN=${DOMAIN:?Set DOMAIN in .env, e.g. DOMAIN=example.com}
+      - REDIRECT_FROM=${REDIRECT_FROM:-}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

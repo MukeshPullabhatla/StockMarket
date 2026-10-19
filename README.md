@@ -417,7 +417,36 @@ If the certificate fails, it's almost always one of: the DuckDNS name doesn't
 resolve to the VM's IP yet (re-check **b**), or port 80/443 is blocked
 (re-check **d**). Caddy retries automatically once fixed.
 
-Switching to a paid domain later (e.g. `mukeshkp.dev`) is the same process:
-add an **A record** for it pointing at the VM's IP at your registrar, change
-`DOMAIN` in `.env`, and re-run the `up` command — Caddy issues a certificate
-for the new name automatically.
+### 12. Moving to your own domain (e.g. `mukeshpullabhatla.com`)
+
+Free dynamic-DNS names like `*.duckdns.org` are blocked by many corporate web
+filters, so visitors on a work VPN can't reach them. A real domain avoids that.
+
+1. Buy the domain (e.g. [Cloudflare Registrar](https://domains.cloudflare.com)
+   or [Porkbun](https://porkbun.com)).
+2. At the registrar's DNS settings, add two **A records** pointing at the VM's
+   public IP: name `@` and name `www`. On Cloudflare, set both to
+   **DNS only** (grey cloud) so Caddy can issue certificates directly.
+3. Check they resolve: `nslookup yourdomain.com` should print the VM's IP.
+4. On the VM, point `DOMAIN` at the new name and list old names to redirect:
+
+   ```bash
+   cd ~/StockMarket
+   sed -i 's/^DOMAIN=.*/DOMAIN=mukeshpullabhatla.com/' .env
+   echo "REDIRECT_FROM=mukeshkp.duckdns.org" >> .env
+   sudo docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build
+   ```
+
+Caddy issues certificates for the domain and `www.`, and permanently
+redirects `www.` and every `REDIRECT_FROM` hostname to the main domain
+(keeping the path), so old links keep working. Keep the DuckDNS cron job
+running so the old name still resolves for the redirect.
+
+New domains are often blocked by corporate filters for their first ~30 days
+("newly registered domain"). Submitting the domain for categorization (e.g.
+as "Personal Sites" or "Technology") at
+[Zscaler](https://sitereview.zscaler.com),
+[Palo Alto](https://urlfiltering.paloaltonetworks.com),
+[Fortinet](https://www.fortiguard.com/webfilter),
+[Cisco Talos](https://talosintelligence.com/reputation_center) and
+[Symantec](https://sitereview.bluecoat.com) usually speeds that up.

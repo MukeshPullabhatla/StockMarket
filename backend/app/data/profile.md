@@ -30,12 +30,12 @@ here, the assistant will say it doesn't know.
 - Version control: GitHub, Bitbucket.
 
 ## Projects
-### This website (mukeshkp.duckdns.org)
+### This website (mukeshpullabhatla.com)
 - Personal site with Home, Stocks and Contact pages, an animated AI-themed
   design, a privacy-friendly visitor counter, and this "Ask about Mukesh"
   assistant.
 - Self-hosted on an Oracle Cloud VM with Docker Compose, Caddy for automatic
-  HTTPS, and a free DuckDNS domain.
+  HTTPS, on his own domain mukeshpullabhatla.com.
 
 ### Stock Trend Dashboard (on this site, under Stocks)
 - Live stock dashboard: quotes, trend charts, market movers, and a personal

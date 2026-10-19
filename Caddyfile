@@ -1,7 +1,15 @@
 # HTTPS front door, used only by docker-compose.https.yml.
-# Caddy obtains and renews a Let's Encrypt certificate for $DOMAIN
-# automatically and redirects http:// to https://.
+# Caddy obtains and renews Let's Encrypt certificates automatically and
+# redirects http:// to https://.
+
+# The main site.
 {$DOMAIN} {
 	encode gzip
 	reverse_proxy frontend:80
+}
+
+# www.<domain> and any old hostnames (REDIRECT_FROM, space-separated)
+# permanently redirect to the main site, keeping the path.
+www.{$DOMAIN} {$REDIRECT_FROM} {
+	redir https://{$DOMAIN}{uri} permanent
 }
