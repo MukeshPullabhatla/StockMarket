@@ -1449,3 +1449,180 @@ button:disabled {
     height: min(560px, calc(100svh - 110px));
   }
 }
+
+/* ============================================================
+   Home: "What I've built" + platform architecture diagram
+   ============================================================ */
+.section-intro {
+  max-width: 720px;
+  margin-top: 10px;
+  color: var(--text);
+}
+
+.built-grid {
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+}
+
+.built-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.built-card p {
+  flex: 1;
+}
+
+.arch {
+  margin: 28px 0 0;
+  display: grid;
+  grid-template-columns: 1fr 56px 1fr 56px 1fr;
+  align-items: center;
+  gap: 0;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(139, 92, 246, 0.12), transparent 60%),
+    var(--bg-elevated);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--shadow);
+}
+
+.arch-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.arch-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  margin-bottom: 2px;
+}
+
+.arch-node {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border-strong);
+  background: rgba(5, 6, 15, 0.55);
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.arch-node:hover {
+  border-color: var(--accent-border);
+  box-shadow: 0 0 22px -8px rgba(139, 92, 246, 0.8);
+}
+
+.arch-node strong {
+  color: var(--text-h);
+  font-size: 15px;
+}
+
+.arch-node span {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.arch-core-node {
+  padding: 22px 18px;
+  text-align: center;
+  align-items: center;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(rgba(10, 12, 28, 0.92), rgba(10, 12, 28, 0.92)) padding-box,
+    var(--gradient-strong) border-box;
+  box-shadow: 0 0 40px -10px rgba(139, 92, 246, 0.9);
+  animation: breathe 4s ease-in-out infinite;
+}
+
+.arch-core-node strong {
+  font-family: var(--heading);
+  font-size: 20px;
+  margin-bottom: 6px;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Animated connector: a faint line with a light pulse travelling along it */
+.arch-link {
+  position: relative;
+  height: 2px;
+  margin: 0 6px;
+  background: linear-gradient(90deg, rgba(167, 139, 250, 0.2), rgba(34, 211, 238, 0.35));
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.arch-link span {
+  position: absolute;
+  top: 0;
+  left: -40%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, #22d3ee, transparent);
+  animation: flow-x 1.8s linear infinite;
+}
+
+@keyframes flow-x {
+  to {
+    left: 100%;
+  }
+}
+
+@keyframes flow-y {
+  to {
+    top: 100%;
+  }
+}
+
+.arch-foundation {
+  grid-column: 1 / -1;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--border-strong);
+}
+
+.arch-foundation .chip-list {
+  margin-top: 6px;
+}
+
+@media (max-width: 900px) {
+  .arch {
+    grid-template-columns: 1fr;
+    padding: 18px;
+  }
+
+  .arch-link {
+    width: 2px;
+    height: 36px;
+    margin: 8px auto;
+    background: linear-gradient(180deg, rgba(167, 139, 250, 0.2), rgba(34, 211, 238, 0.35));
+  }
+
+  .arch-link span {
+    top: -40%;
+    left: 0;
+    width: 100%;
+    height: 40%;
+    background: linear-gradient(180deg, transparent, #22d3ee, transparent);
+    animation-name: flow-y;
+  }
+}
+
+@media (max-width: 600px) {
+  .built-grid {
+    grid-template-columns: 1fr;
+  }
+}
