@@ -50,3 +50,7 @@ class VisitorCount(BaseModel):
 class SymbolInfo(BaseModel):
     symbol: str
     name: str | None = None
+
+
+class Transcription(BaseModel):
+    text: str

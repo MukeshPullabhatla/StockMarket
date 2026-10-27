@@ -21,7 +21,7 @@ limiter = ChatRateLimiter(
 )
 
 
-def _describe_wait(seconds: int) -> str:
+def describe_wait(seconds: int) -> str:
     minutes = max(1, round(seconds / 60))
     if minutes < 60:
         return f"{minutes} minute{'s' if minutes != 1 else ''}"
@@ -42,7 +42,7 @@ def guard_chat_request(body: ChatRequest, request: Request) -> list[ChatMessage]
 
     blocked = limiter.check(client_ip(request))
     if blocked:
-        wait = _describe_wait(blocked.retry_after)
+        wait = describe_wait(blocked.retry_after)
         detail = (
             f"The assistant has reached its daily limit for the whole site. Please try again in {wait}."
             if blocked.site_wide

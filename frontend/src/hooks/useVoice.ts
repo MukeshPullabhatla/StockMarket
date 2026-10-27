@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { transcribeAudio } from '../api/client'
 
-// Browser speech APIs: SpeechRecognition (Chrome, Edge, Safari) for listening and
-// speechSynthesis (all modern browsers) for talking. Free and on-device/browser-provided,
-// so voice mode costs nothing beyond the normal chat request.
+// Voice input: the browser's own SpeechRecognition where it exists (desktop Chrome/Edge,
+// Safari), otherwise record the question and transcribe it on the server (Groq Whisper) —
+// needed on iPhone, where every browser except Safari lacks speech recognition.
+// Voice output: the browser's speechSynthesis.
+
+export type VoicePhase = 'idle' | 'starting' | 'listening' | 'transcribing'
 
 interface RecognitionResult {
   isFinal: boolean
@@ -51,7 +55,7 @@ const RECOGNITION_ERRORS: Record<string, string> = {
  */
 export function useSpeechInput(onFinal: (text: string) => void) {
   const Ctor = getRecognitionCtor()
-  const [phase, setPhase] = useState<'idle' | 'starting' | 'listening'>('idle')
+  const [phase, setPhase] = useState<VoicePhase>('idle')
   const listening = phase !== 'idle'
   const [interim, setInterim] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -113,6 +117,169 @@ export function useSpeechInput(onFinal: (text: string) => void) {
   const clearError = useCallback(() => setError(null), [])
 
   return { supported: Ctor !== null, listening, phase, interim, error, clearError, start, stop }
+}
+
+const NO_SPEECH = "I didn't hear anything. Tap 🎤 and speak — I'll stop listening when you pause."
+const MAX_RECORDING_MS = 30_000
+const SILENCE_AFTER_SPEECH_MS = 1400
+const NO_SPEECH_TIMEOUT_MS = 7000
+const MIN_AUDIO_BYTES = 1000
+const MIN_ANALYSED_FOR_SILENCE = 50 // ~5 s of actual 100 ms checks before concluding "no speech"
+const MIN_ANALYSED_ON_TAP = 10
+
+function pickMimeType(): string | undefined {
+  const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac', 'audio/ogg;codecs=opus']
+  return candidates.find((t) => MediaRecorder.isTypeSupported?.(t))
+}
+
+/**
+ * Speech-to-text by recording: works in any browser with a microphone API.
+ * Stops automatically after a pause in speech (or 30 s), then transcribes on the server.
+ */
+export function useRecordedSpeechInput(onFinal: (text: string) => void) {
+  const supported =
+    typeof window !== 'undefined' && !!navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== 'undefined'
+  const [phase, setPhase] = useState<VoicePhase>('idle')
+  const [error, setError] = useState<string | null>(null)
+  const recorderRef = useRef<MediaRecorder | null>(null)
+  const stoppedByUserRef = useRef(false)
+  const onFinalRef = useRef(onFinal)
+  useEffect(() => {
+    onFinalRef.current = onFinal
+  }, [onFinal])
+
+  // Automatic stop (pause detected, timeout or max length).
+  const finishRecording = useCallback(() => {
+    if (recorderRef.current?.state === 'recording') recorderRef.current.stop()
+  }, [])
+
+  // The visitor tapped the mic to finish.
+  const stop = useCallback(() => {
+    stoppedByUserRef.current = true
+    finishRecording()
+  }, [finishRecording])
+
+  const start = useCallback(async () => {
+    if (!supported || recorderRef.current) return
+    setError(null)
+    stoppedByUserRef.current = false
+    setPhase('starting')
+
+    // Create the audio context inside the tap (iOS only allows it during a user gesture).
+    const AudioCtx =
+      window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    const ctx = AudioCtx ? new AudioCtx() : null
+
+    let stream: MediaStream
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })
+    } catch (err) {
+      void ctx?.close()
+      setPhase('idle')
+      const name = err instanceof DOMException ? err.name : ''
+      setError(
+        name === 'NotAllowedError'
+          ? 'Microphone access is blocked. Allow it in your browser settings to talk to me.'
+          : name === 'NotFoundError'
+            ? 'No microphone found. Check that one is connected and enabled.'
+            : "Couldn't start the microphone. Please try again.",
+      )
+      return
+    }
+
+    const mimeType = pickMimeType()
+    const recorder = new MediaRecorder(stream, { ...(mimeType ? { mimeType } : {}), audioBitsPerSecond: 64_000 })
+    const chunks: Blob[] = []
+    let heardSpeech = false
+    let voiceDetection = false
+    let analysed = 0
+    let tickTimer = 0
+
+    // Simple voice-activity detection: stop after a pause once speech was heard.
+    if (ctx) {
+      void ctx.resume()
+      const analyser = ctx.createAnalyser()
+      analyser.fftSize = 1024
+      ctx.createMediaStreamSource(stream).connect(analyser)
+      const samples = new Uint8Array(analyser.fftSize)
+      const startedAt = performance.now()
+      let lastLoud = startedAt
+      const tick = () => {
+        voiceDetection = ctx.state === 'running'
+        if (voiceDetection) {
+          analyser.getByteTimeDomainData(samples)
+          analysed += 1
+          let sum = 0
+          for (const v of samples) sum += ((v - 128) / 128) ** 2
+          const now = performance.now()
+          if (Math.sqrt(sum / samples.length) > 0.035) {
+            heardSpeech = true
+            lastLoud = now
+          }
+          if (heardSpeech && now - lastLoud > SILENCE_AFTER_SPEECH_MS) return finishRecording()
+          // Only give up once enough audio was actually analysed — a busy page can delay
+          // these checks, and wall-clock time alone could miss the speech entirely.
+          if (!heardSpeech && now - startedAt > NO_SPEECH_TIMEOUT_MS && analysed >= MIN_ANALYSED_FOR_SILENCE) {
+            return finishRecording()
+          }
+        }
+        tickTimer = window.setTimeout(tick, 100)
+      }
+      tickTimer = window.setTimeout(tick, 300)
+    }
+    const maxTimer = window.setTimeout(finishRecording, MAX_RECORDING_MS)
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size) chunks.push(e.data)
+    }
+    recorder.onstop = async () => {
+      window.clearTimeout(tickTimer)
+      window.clearTimeout(maxTimer)
+      stream.getTracks().forEach((t) => t.stop())
+      void ctx?.close()
+      recorderRef.current = null
+
+      const blob = new Blob(chunks, { type: recorder.mimeType || mimeType || 'audio/webm' })
+      // Discard only when detection reliably heard nothing; otherwise let the server decide.
+      // Trust the detector once it has analysed enough audio: ~5 s for an automatic stop,
+      // ~1 s when the visitor tapped stop (they may have spoken briefly).
+      const enoughAnalysed = analysed >= (stoppedByUserRef.current ? MIN_ANALYSED_ON_TAP : MIN_ANALYSED_FOR_SILENCE)
+      const confidentlySilent = voiceDetection && !heardSpeech && enoughAnalysed
+      // A near-empty file holds no real audio (Whisper would invent text for it).
+      if (confidentlySilent || blob.size < MIN_AUDIO_BYTES) {
+        setPhase('idle')
+        setError(NO_SPEECH)
+        return
+      }
+      setPhase('transcribing')
+      try {
+        const text = await transcribeAudio(blob)
+        setPhase('idle')
+        if (text) onFinalRef.current(text)
+        else setError(NO_SPEECH)
+      } catch (err) {
+        setPhase('idle')
+        setError(err instanceof Error ? err.message : "Couldn't transcribe that. Please try again.")
+      }
+    }
+
+    recorderRef.current = recorder
+    recorder.start()
+    setPhase('listening')
+  }, [supported, finishRecording])
+
+  useEffect(() => () => recorderRef.current?.stop(), [])
+
+  const clearError = useCallback(() => setError(null), [])
+
+  return { supported, listening: phase !== 'idle', phase, interim: '', error, clearError, start, stop }
+}
+
+/** Voice input using the best method this browser supports. */
+export function useVoiceInput(onFinal: (text: string) => void) {
+  const native = useSpeechInput(onFinal)
+  const recorded = useRecordedSpeechInput(onFinal)
+  return native.supported ? native : recorded
 }
 
 /** Turns markdown chat text into something natural to read aloud. */
@@ -215,6 +382,19 @@ export function useSpeechOutput() {
     say(rest)
   }, [say])
 
+  /**
+   * iOS only lets a page speak if speech was first started directly by a tap. Call this
+   * from tap handlers; a silent utterance unlocks speech for answers that arrive later.
+   */
+  const unlockedRef = useRef(false)
+  const unlock = useCallback(() => {
+    if (!supported || unlockedRef.current) return
+    const silent = new SpeechSynthesisUtterance(' ')
+    silent.volume = 0
+    window.speechSynthesis.speak(silent)
+    unlockedRef.current = true
+  }, [supported])
+
   const cancel = useCallback(() => {
     bufferRef.current = ''
     pendingRef.current = 0
@@ -222,5 +402,5 @@ export function useSpeechOutput() {
     setSpeaking(false)
   }, [supported])
 
-  return { supported, speaking, feed, flush, cancel }
+  return { supported, speaking, feed, flush, cancel, unlock }
 }

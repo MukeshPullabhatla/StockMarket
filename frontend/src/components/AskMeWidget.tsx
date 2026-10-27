@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { streamChat } from '../api/client'
-import { useSpeechInput, useSpeechOutput } from '../hooks/useVoice'
+import { useSpeechOutput, useVoiceInput } from '../hooks/useVoice'
 import { PROFILE_PHOTO } from '../siteConfig'
 import type { ChatMessage } from '../types'
 
@@ -23,7 +23,7 @@ export function AskMeWidget() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const tts = useSpeechOutput()
-  const mic = useSpeechInput((text) => ask(text, true))
+  const mic = useVoiceInput((text) => ask(text, true))
   const { stop: stopListening } = mic
   const { cancel: cancelSpeech } = tts
 
@@ -114,6 +114,7 @@ export function AskMeWidget() {
                 className={`askme-icon-btn${readAloud ? ' active' : ''}`}
                 onClick={() => {
                   if (readAloud) tts.cancel()
+                  else tts.unlock()
                   setReadAloud((on) => !on)
                 }}
                 aria-pressed={readAloud}
@@ -153,7 +154,14 @@ export function AskMeWidget() {
             {messages.length === 0 && (
               <div className="askme-suggestions">
                 {SUGGESTIONS.map((s) => (
-                  <button key={s} className="askme-chip" onClick={() => ask(s)}>
+                  <button
+                    key={s}
+                    className="askme-chip"
+                    onClick={() => {
+                      tts.unlock()
+                      ask(s)
+                    }}
+                  >
                     {s}
                   </button>
                 ))}
@@ -172,6 +180,8 @@ export function AskMeWidget() {
                   <span className="rec-dot" aria-hidden="true" />
                   Listening — speak now
                 </>
+              ) : mic.phase === 'transcribing' ? (
+                <span>Transcribing your question…</span>
               ) : (
                 <>
                   <span className="voice-bars" aria-hidden="true">
@@ -193,6 +203,7 @@ export function AskMeWidget() {
             className="askme-form"
             onSubmit={(e) => {
               e.preventDefault()
+              tts.unlock()
               ask(input)
             }}
           >
@@ -205,7 +216,9 @@ export function AskMeWidget() {
                   ? 'Starting microphone…'
                   : mic.phase === 'listening'
                     ? 'Listening — speak now…'
-                    : 'Ask a question…'
+                    : mic.phase === 'transcribing'
+                      ? 'Transcribing…'
+                      : 'Ask a question…'
               }
               maxLength={1000}
               disabled={busy}
@@ -220,10 +233,11 @@ export function AskMeWidget() {
                     mic.stop()
                   } else {
                     tts.cancel()
-                    mic.start()
+                    tts.unlock()
+                    void mic.start()
                   }
                 }}
-                disabled={busy}
+                disabled={busy || mic.phase === 'transcribing'}
                 aria-pressed={mic.listening}
                 aria-label={mic.listening ? 'Stop listening' : 'Talk to the assistant'}
                 title={mic.listening ? 'Stop listening' : 'Talk to the assistant'}

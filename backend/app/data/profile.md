@@ -82,7 +82,9 @@ repository or system names, no confidential employer details.
 - AI / LLM: Vertex AI, Azure OpenAI, OpenAI, Gemini, Claude; LLM
   orchestration, RAG, Model Context Protocol (MCP), prompt engineering,
   knowledge graphs, AI output evaluation (mutation testing).
-- Voice AI: Pipecat, Deepgram (STT), ElevenLabs (TTS), Twilio, Daily.
+- Voice AI: Pipecat, Deepgram (STT), ElevenLabs (TTS), Twilio, Daily;
+  Whisper speech-to-text and the browser Web Speech API (used in this site's
+  voice mode).
 - Languages: C# (.NET 6/8/10), TypeScript, JavaScript, Python.
 - Frontend: React, Vite, MUI, SignalR client.
 - Backend: ASP.NET Core, FastAPI, Node.js/Express, Domain-Driven Design,
@@ -104,7 +106,31 @@ repository or system names, no confidential employer details.
   design, a privacy-friendly visitor counter, and this "Ask about Mukesh"
   assistant (grounded only in this profile, with rate limiting).
 - Self-hosted on an Oracle Cloud VM with Docker Compose, Caddy for automatic
-  HTTPS, on his own domain mukeshpullabhatla.com.
+  HTTPS, on his own domain mukeshpullabhatla.com. Includes link-preview cards
+  and search-engine structured data.
+
+### Voice mode for this assistant
+- Visitors can talk to this assistant: tap the microphone (🎤), ask a
+  question out loud, and the answer is read aloud. Typed questions can be read
+  aloud too with the speaker (🔊) button.
+- Speech-to-text: uses the browser's built-in speech recognition where
+  available (desktop Chrome and Edge, Safari). Where it isn't — for example
+  Chrome on iPhone, or Firefox — the question is recorded and transcribed on
+  the server with Whisper (via the Groq API), with a vocabulary hint so names
+  like "Mukesh" are recognized correctly.
+- Recording stops automatically when the visitor pauses, using a simple
+  in-browser loudness (voice-activity) check; silent or empty recordings are
+  discarded, and low-confidence transcripts are filtered out so Whisper's
+  invented text on silence never reaches the assistant.
+- Text-to-speech: the browser's speech synthesis reads answers sentence by
+  sentence as they stream in, so the voice starts almost immediately; markdown
+  is cleaned up before speaking, and an offline voice is used if an online
+  voice fails. On iPhone, speech is unlocked on the visitor's tap, as iOS
+  requires.
+- Voice transcription is rate-limited per visitor and site-wide, and
+  recordings are capped at 30 seconds.
+- Tip for visitors: on iPhone, turn off silent mode to hear spoken answers;
+  the microphone needs browser permission the first time.
 
 ### Stock Trend Dashboard (on this site, under Stocks)
 - Live stock dashboard: quotes, trend charts, market movers, and a personal

@@ -75,3 +75,14 @@ export async function* streamChat(
 export function recordVisit(): Promise<{ total: number }> {
   return request('/api/visits', { method: 'POST' })
 }
+
+export async function transcribeAudio(audio: Blob): Promise<string> {
+  const res = await fetch('/api/transcribe', {
+    method: 'POST',
+    headers: { 'Content-Type': audio.type || 'audio/webm' },
+    body: audio,
+  })
+  const body = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(body.detail || `Request failed: ${res.status}`)
+  return (body.text ?? '').trim()
+}

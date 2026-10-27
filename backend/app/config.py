@@ -25,3 +25,11 @@ CHAT_MAX_HISTORY_MESSAGES = 20
 
 # Secret required to change the shared (default) watchlist; empty disables edits.
 ADMIN_KEY = os.getenv("ADMIN_KEY", "")
+
+# Server-side speech-to-text for voice mode on browsers without built-in speech
+# recognition (e.g. every browser on iPhone except Safari).
+GROQ_STT_MODEL = os.getenv("GROQ_STT_MODEL", "whisper-large-v3-turbo")
+TRANSCRIBE_MAX_BYTES = 1_000_000  # ~30 s of compressed audio; nginx's default body limit is 1 MB
+TRANSCRIBE_LIMIT_PER_HOUR = int(os.getenv("TRANSCRIBE_LIMIT_PER_HOUR", "20"))
+TRANSCRIBE_LIMIT_PER_DAY = int(os.getenv("TRANSCRIBE_LIMIT_PER_DAY", "60"))
+TRANSCRIBE_LIMIT_SITE_PER_DAY = int(os.getenv("TRANSCRIBE_LIMIT_SITE_PER_DAY", "600"))
