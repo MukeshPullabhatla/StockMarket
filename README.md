@@ -1,16 +1,31 @@
-# Stock Trend Dashboard
+# Mukesh KP — personal site & Stock Trend Dashboard
 
-A live stock market dashboard with a built-in AI assistant. It tracks watchlisted
-tickers and market movers in real time, and lets you ask a chatbot questions
-about the market in plain English — the assistant fetches live data itself
-before it answers, instead of relying on stale training knowledge.
+Source for [mukeshpullabhatla.com](https://mukeshpullabhatla.com): Mukesh Kumar
+Pullabhatla's personal site, with an "Ask about Mukesh" AI assistant you can
+type or talk to, and the **Stock Trend Dashboard** — a live stock market
+dashboard with an AI assistant that fetches live data itself before it
+answers, instead of relying on stale training knowledge.
 
 ## What it does
 
+**Personal site**
+- **Home, Stocks and Contact pages** in an animated AI theme (neural-network
+  canvas background, glass cards), with a profile photo, "What I've built"
+  work highlights and a "How I build GenAI platforms" diagram.
+- **"Ask about Mukesh" assistant** — answers visitors' questions strictly from
+  a profile file, streamed token by token.
+- **Voice mode** — tap 🎤 to ask out loud and hear the answer read back; works
+  on desktop and iPhone (see [Voice mode](#voice-mode)).
+- **Visitor counter** — privacy-friendly unique daily visitors in the footer.
+- **Link previews & SEO** — preview card for LinkedIn/WhatsApp/Slack/X,
+  structured data, `robots.txt` and `sitemap.xml`.
+
+**Stock Trend Dashboard** (`/stocks/dashboard`)
 - **Live quotes & charts** — price, change, day high/low, and volume for any
   ticker, plus historical close-price history for trend charts.
 - **Market movers** — top gainers, losers, and most-active stocks.
-- **Watchlist** — add/remove symbols, persisted server-side.
+- **Personal watchlist** — each visitor's list is saved in their own browser,
+  starting from a default list the site owner curates.
 - **Real-time updates** — a WebSocket connection pushes fresh quotes to the
   browser on a poll interval, so prices update without refreshing.
 - **AI chat assistant** — ask things like *"how is AAPL doing today?"* or
@@ -24,7 +39,9 @@ backend/   FastAPI (Python), yfinance for market data, SQLite-backed watchlist
 ```
 
 - `backend/app/api/stocks.py` — REST endpoints for quotes, history, and movers.
-- `backend/app/api/watchlist.py` — CRUD endpoints for the watchlist.
+- `backend/app/api/watchlist.py` — the shared default watchlist (read by
+  everyone; changes need `ADMIN_KEY`). `GET /api/symbol/{symbol}` in
+  `stocks.py` validates tickers for visitors' personal lists.
 - `backend/app/api/ws.py` + `services/broadcaster.py` — WebSocket price feed;
   a background poll loop periodically re-fetches quotes for watched/mover
   symbols and broadcasts them to connected clients.
@@ -39,17 +56,28 @@ backend/   FastAPI (Python), yfinance for market data, SQLite-backed watchlist
   to change what it knows; anything not in it, the assistant says it doesn't
   know. It streams answers token by token and shares the chat rate limits
   (`services/chat_guard.py`) with the market assistant.
+- `backend/app/api/transcribe.py` + `services/transcribe_service.py` —
+  server-side speech-to-text (Groq Whisper) for voice mode on browsers
+  without built-in speech recognition. Separately rate-limited.
 - `backend/app/api/visits.py` + `services/visitor_store.py` — site visitor
   counter. Each visitor counts once per day (salted hash of IP + user agent,
   kept only for the current day; raw IPs are never stored; bots are skipped).
   The footer shows the total once it reaches `VISITOR_COUNT_MIN` in
   `frontend/src/siteConfig.ts`.
-- `frontend/src/components/` — `Dashboard`, `Watchlist`, `MarketMovers`,
-  `StockChart`, and `ChatPanel`, plus `Layout` (nav bar and footer).
+- `frontend/src/components/` — dashboard parts (`Dashboard`, `Watchlist`,
+  `MarketMovers`, `StockChart`, `ChatPanel`) and site parts: `Layout` (nav bar
+  and footer), `NeuralBackground` (animated canvas), `PlatformDiagram`,
+  `TypingText`, `VisitorCounter`, and `AskMeWidget` (the floating assistant).
+- `frontend/src/hooks/useVoice.ts` — voice input (browser speech recognition,
+  or recording + `/api/transcribe`) and spoken answers.
 - `frontend/src/pages/` — site pages, routed with `react-router`: Home (`/`),
   Stocks (`/stocks`), Contact (`/contact`); the dashboard lives at
-  `/stocks/dashboard`. Name, email and links are set in
-  `frontend/src/siteConfig.ts`.
+  `/stocks/dashboard`. Name, email, links, profile photo paths and the
+  visitor-counter threshold are set in `frontend/src/siteConfig.ts`.
+- `frontend/public/` — favicon, `apple-touch-icon.png`, profile photo copies
+  (`profile-480.webp`, `profile-128.webp`), the link-preview image
+  (`og-image.jpg`, 1200×630), `robots.txt` and `sitemap.xml`. Preview tags and
+  structured data are in `frontend/index.html`.
 
 ## How the LLM/AI integration works
 
@@ -76,14 +104,36 @@ LLM-powered agents:
    `services/market_data.py` (which hits `yfinance`), feeds the results back
    into the conversation as `tool` messages, and asks the model again — up
    to `MAX_TOOL_ROUNDS` (5) rounds.
-4. Once the model has what it needs, it streams a plain-text answer back to
-   the client over Server-Sent Events (`text/event-stream`), along with
+4. Responses are streamed from Groq token by token and relayed to the client
+   over Server-Sent Events (`text/event-stream`) as `text` events, along with
    `tool` events (so the UI can show "Looking up quote…") and a final `done`
-   event.
+   event. Streamed tool calls arrive in fragments and are reassembled before
+   they run.
 
 So the LLM acts as a reasoning/orchestration layer on top of the app's own
 market-data service — it decides *which* data it needs and *when*, but every
 number it cites comes from a live tool call, not from the model itself.
+
+## Voice mode
+
+The "Ask about Mukesh" assistant can be used hands-free:
+
+- **Speech-to-text.** Where the browser has built-in speech recognition
+  (desktop Chrome/Edge, Safari) it's used directly, with live captions.
+  Elsewhere — every iPhone browser except Safari, and Firefox — the question is
+  recorded (`MediaRecorder`) and sent to `POST /api/transcribe`, which runs
+  Groq Whisper (`GROQ_STT_MODEL`) with a vocabulary hint so names like
+  "Mukesh" are spelled correctly.
+- **End of speech.** A simple in-browser loudness check stops recording after
+  ~1.4 s of silence (or 30 s max); tapping 🎤 again also stops it.
+- **Avoiding hallucinations.** Whisper invents text ("Thank you.") for silent
+  audio, so silent or near-empty recordings are discarded in the browser, and
+  the server drops low-confidence segments (`avg_logprob` below −0.7).
+- **Spoken answers.** The browser's `speechSynthesis` reads the streamed
+  answer sentence by sentence (markdown stripped), falling back to an offline
+  voice if an online one fails. iOS only allows speech started by a tap, so
+  every tap (mic, send, suggestion, 🔊) first "unlocks" it with a silent
+  utterance. On iPhone, silent mode mutes it.
 
 ## Running locally
 
@@ -115,13 +165,21 @@ Copy `.env.example` to `.env` and set:
 | `CHAT_LIMIT_PER_HOUR` / `CHAT_LIMIT_PER_DAY` | AI chat messages allowed per visitor (default 15 / 50). |
 | `CHAT_LIMIT_SITE_PER_DAY` | AI chat messages allowed for the whole site per day, protecting the Groq quota (default 500). |
 | `ADMIN_KEY` | Secret needed to change the shared default watchlist (sent as an `X-Admin-Key` header). Leave empty to disable edits. |
+| `GROQ_STT_MODEL` | Groq speech-to-text model for voice mode (default: `whisper-large-v3-turbo`). |
+| `TRANSCRIBE_LIMIT_PER_HOUR` / `TRANSCRIBE_LIMIT_PER_DAY` | Voice transcriptions allowed per visitor (default 20 / 60). |
+| `TRANSCRIBE_LIMIT_SITE_PER_DAY` | Voice transcriptions allowed for the whole site per day (default 600). |
+| `DOMAIN` | HTTPS deploys only: the site's hostname (see deploy steps 11–12). |
+| `REDIRECT_FROM` | HTTPS deploys only: old hostnames that redirect to `DOMAIN` (space-separated). |
 
 ### Abuse protection
 
 - **AI chat** is rate-limited per visitor IP and site-wide (limits above; a
   blocked visitor sees a friendly "try again in N minutes" message). Messages
   are capped at 1,000 characters and only the last 20 messages of history are
-  sent to the model.
+  sent to the model. Both assistants share one limiter, so the site-wide cap
+  protects the whole Groq quota.
+- **Voice transcription** has its own per-visitor and site-wide limits, accepts
+  only audio uploads, and caps recordings at about 30 seconds (1 MB).
 - **Watchlists are personal**: each visitor's list is stored in their own
   browser (`localStorage`), seeded from the shared default list on first
   visit. Only the site owner can change that default list:
@@ -137,7 +195,17 @@ Copy `.env.example` to `.env` and set:
   capped at 25 symbols.
 
 Without `GROQ_API_KEY`, the rest of the dashboard (quotes, charts, watchlist,
-movers) still works — only the chat assistant is disabled.
+movers) still works — only the AI assistants and voice transcription are
+disabled.
+
+### Link previews & SEO
+
+`frontend/index.html` holds the Open Graph / Twitter preview tags, canonical
+URL and Person structured data; `frontend/public/robots.txt` and
+`sitemap.xml` list the pages. They all use the full domain
+(`https://mukeshpullabhatla.com`) — update them if the domain changes. After
+changing the preview, refresh LinkedIn's cache with the
+[Post Inspector](https://www.linkedin.com/post-inspector/).
 
 ### Docker
 
