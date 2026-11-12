@@ -16,6 +16,9 @@ answers, instead of relying on stale training knowledge.
   a profile file, streamed token by token.
 - **Voice mode** — tap 🎤 to ask out loud and hear the answer read back; works
   on desktop and iPhone (see [Voice mode](#voice-mode)).
+- **AI Lab → Smart Writer** (`/ai-lab/smart-writer`) — paste or dictate a
+  rough draft and get a polished email, text, LinkedIn post, Slack message or
+  X post in the chosen tone and length (or fix grammar only).
 - **Visitor counter** — privacy-friendly unique daily visitors in the footer.
 - **Link previews & SEO** — preview card for LinkedIn/WhatsApp/Slack/X,
   structured data, `robots.txt` and `sitemap.xml`.
@@ -59,6 +62,10 @@ backend/   FastAPI (Python), yfinance for market data, SQLite-backed watchlist
 - `backend/app/api/transcribe.py` + `services/transcribe_service.py` —
   server-side speech-to-text (Groq Whisper) for voice mode on browsers
   without built-in speech recognition. Separately rate-limited.
+- `backend/app/api/smart_write.py` + `services/smart_write_service.py` —
+  Smart Writer. Streams the rewrite over SSE; the draft is wrapped in
+  `<draft>` tags and the system prompt treats it strictly as text to rewrite
+  (prompt-injection guard). Counts against the shared AI rate limit.
 - `backend/app/api/visits.py` + `services/visitor_store.py` — site visitor
   counter. Each visitor counts once per day (salted hash of IP + user agent,
   kept only for the current day; raw IPs are never stored; bots are skipped).
@@ -71,8 +78,8 @@ backend/   FastAPI (Python), yfinance for market data, SQLite-backed watchlist
 - `frontend/src/hooks/useVoice.ts` — voice input (browser speech recognition,
   or recording + `/api/transcribe`) and spoken answers.
 - `frontend/src/pages/` — site pages, routed with `react-router`: Home (`/`),
-  Stocks (`/stocks`), Contact (`/contact`); the dashboard lives at
-  `/stocks/dashboard`. Name, email, links, profile photo paths and the
+  Stocks (`/stocks`), AI Lab (`/ai-lab`), Contact (`/contact`); the dashboard
+  lives at `/stocks/dashboard` and Smart Writer at `/ai-lab/smart-writer`. Name, email, links, profile photo paths and the
   visitor-counter threshold are set in `frontend/src/siteConfig.ts`.
 - `frontend/public/` — favicon, `apple-touch-icon.png`, profile photo copies
   (`profile-480.webp`, `profile-128.webp`), the link-preview image
@@ -176,8 +183,9 @@ Copy `.env.example` to `.env` and set:
 - **AI chat** is rate-limited per visitor IP and site-wide (limits above; a
   blocked visitor sees a friendly "try again in N minutes" message). Messages
   are capped at 1,000 characters and only the last 20 messages of history are
-  sent to the model. Both assistants share one limiter, so the site-wide cap
-  protects the whole Groq quota.
+  sent to the model. Both assistants and Smart Writer share one limiter, so
+  the site-wide cap protects the whole Groq quota. Smart Writer drafts are
+  capped at 3,000 characters.
 - **Voice transcription** has its own per-visitor and site-wide limits, accepts
   only audio uploads, and caps recordings at about 30 seconds (1 MB).
 - **Watchlists are personal**: each visitor's list is stored in their own

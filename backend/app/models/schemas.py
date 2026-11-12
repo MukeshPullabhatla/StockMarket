@@ -54,3 +54,14 @@ class SymbolInfo(BaseModel):
 
 class Transcription(BaseModel):
     text: str
+
+
+SMART_WRITE_MAX_CHARS = 3000
+
+
+class SmartWriteRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=SMART_WRITE_MAX_CHARS)
+    format: Literal["email", "text", "linkedin", "slack", "x"] = "email"
+    tone: Literal["professional", "friendly", "concise", "persuasive", "apologetic", "enthusiastic"] = "professional"
+    length: Literal["shorter", "same", "longer"] = "same"
+    grammar_only: bool = False

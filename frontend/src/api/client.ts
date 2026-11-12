@@ -36,20 +36,39 @@ export type ChatStreamEvent =
   | { type: 'error'; error: string }
   | { type: 'done' }
 
-export async function* streamChat(
-  messages: ChatMessage[],
-  endpoint = '/api/chat',
-): AsyncGenerator<ChatStreamEvent> {
+export function streamChat(messages: ChatMessage[], endpoint = '/api/chat'): AsyncGenerator<ChatStreamEvent> {
+  return streamEvents(endpoint, { messages })
+}
+
+export type SmartWriteFormat = 'email' | 'text' | 'linkedin' | 'slack' | 'x'
+export type SmartWriteTone = 'professional' | 'friendly' | 'concise' | 'persuasive' | 'apologetic' | 'enthusiastic'
+export type SmartWriteLength = 'shorter' | 'same' | 'longer'
+
+export interface SmartWriteRequest {
+  text: string
+  format: SmartWriteFormat
+  tone: SmartWriteTone
+  length: SmartWriteLength
+  grammar_only: boolean
+}
+
+export function streamSmartWrite(req: SmartWriteRequest): AsyncGenerator<ChatStreamEvent> {
+  return streamEvents('/api/smart-write', req)
+}
+
+/** POSTs JSON and yields the Server-Sent Events the backend streams back. */
+async function* streamEvents(endpoint: string, payload: unknown): AsyncGenerator<ChatStreamEvent> {
   const res = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages }),
+    body: JSON.stringify(payload),
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.detail || `Request failed: ${res.status}`)
+    const detail = Array.isArray(body.detail) ? 'Please check your input and try again.' : body.detail
+    throw new Error(detail || `Request failed: ${res.status}`)
   }
-  if (!res.body) throw new Error('No response body from chat endpoint')
+  if (!res.body) throw new Error('No response body from the server')
 
   const reader = res.body.getReader()
   const decoder = new TextDecoder()

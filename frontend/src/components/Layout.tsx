@@ -67,6 +67,17 @@ export function Layout() {
                 </NavLink>
               </div>
             </div>
+            <div className="nav-dropdown">
+              <NavLink to="/ai-lab" className="nav-link" aria-haspopup="true">
+                AI Lab <span className="nav-caret">▾</span>
+              </NavLink>
+              <div className="nav-menu">
+                <NavLink to="/ai-lab/smart-writer" className="nav-menu-item" onClick={closeMenu}>
+                  <span className="nav-menu-title">Smart Writer</span>
+                  <span className="nav-menu-desc">Rewrite drafts in any tone</span>
+                </NavLink>
+              </div>
+            </div>
             <NavLink to="/contact" className="nav-link">
               Contact
             </NavLink>

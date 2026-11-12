@@ -109,6 +109,17 @@ repository or system names, no confidential employer details.
   HTTPS, on his own domain mukeshpullabhatla.com. Includes link-preview cards
   and search-engine structured data.
 
+### Smart Writer (on this site, under AI Lab)
+- A writing tool: paste or dictate a rough draft and get a polished version
+  for an email (with subject line), text message, LinkedIn post, Slack/Teams
+  message or X post (kept within 280 characters).
+- Choose the tone (professional, friendly, concise, persuasive, apologetic,
+  enthusiastic) and length (shorter, same, longer), or "fix grammar only" to
+  keep the author's own wording. Results stream in and can be copied.
+- Built with a Groq-hosted LLM and prompt-injection guards: the draft is
+  always treated as text to rewrite, never as instructions. Drafts aren't
+  stored. It's a public cousin of the AI-assisted writing service he works on.
+
 ### Voice mode for this assistant
 - Visitors can talk to this assistant: tap the microphone (🎤), ask a
   question out loud, and the answer is read aloud. Typed questions can be read

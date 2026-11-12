@@ -2,9 +2,11 @@ import { BrowserRouter, Route, Routes } from 'react-router'
 import './App.css'
 import { Dashboard } from './components/Dashboard'
 import { Layout } from './components/Layout'
+import { AiLabPage } from './pages/AiLabPage'
 import { ContactPage } from './pages/ContactPage'
 import { HomePage } from './pages/HomePage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { SmartWriterPage } from './pages/SmartWriterPage'
 import { StocksPage } from './pages/StocksPage'
 
 function App() {
@@ -15,6 +17,8 @@ function App() {
           <Route index element={<HomePage />} />
           <Route path="stocks" element={<StocksPage />} />
           <Route path="stocks/dashboard" element={<Dashboard />} />
+          <Route path="ai-lab" element={<AiLabPage />} />
+          <Route path="ai-lab/smart-writer" element={<SmartWriterPage />} />
           <Route path="contact" element={<ContactPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>

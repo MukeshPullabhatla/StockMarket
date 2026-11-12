@@ -40,14 +40,18 @@ def guard_chat_request(body: ChatRequest, request: Request) -> list[ChatMessage]
             detail=f"Message is too long — please keep it under {CHAT_MAX_MESSAGE_CHARS:,} characters.",
         )
 
+    enforce_ai_limit(request)
+    return messages[-CHAT_MAX_HISTORY_MESSAGES:]
+
+
+def enforce_ai_limit(request: Request) -> None:
+    """Count one AI request for this visitor, or raise 429 if they (or the site) hit a limit."""
     blocked = limiter.check(client_ip(request))
     if blocked:
         wait = describe_wait(blocked.retry_after)
         detail = (
-            f"The assistant has reached its daily limit for the whole site. Please try again in {wait}."
+            f"The AI has reached its daily limit for the whole site. Please try again in {wait}."
             if blocked.site_wide
-            else f"You've reached the chat limit for now — try again in {wait}."
+            else f"You've reached the AI limit for now — try again in {wait}."
         )
         raise HTTPException(status_code=429, detail=detail, headers={"Retry-After": str(blocked.retry_after)})
-
-    return messages[-CHAT_MAX_HISTORY_MESSAGES:]
